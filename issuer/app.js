@@ -200,7 +200,9 @@ async function getDidContract( ) {
   didContract = await response.json()
   console.log( 'DID contract' );
   console.log( didContract );
-  issuanceRequestConfig.issuance.type = didContract.id;
+  if ( issuanceRequestConfig.issuance.type.length == 0 ) {
+    issuanceRequestConfig.issuance.type = didContract.id;
+  }
   issuanceRequestConfig.authority = didContract.input.issuer;
 }
 

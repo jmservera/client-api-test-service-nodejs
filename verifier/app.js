@@ -269,7 +269,9 @@ async function getDidContract( ) {
   didContract = await response.json()
   console.log( 'DID contract' );
   console.log( didContract );
-  presentationRequestConfig.presentation.requestedCredentials[0].type = didContract.id;
+  if ( presentationRequestConfig.presentation.requestedCredentials[0].type.length == 0 ) {
+    presentationRequestConfig.presentation.requestedCredentials[0].type = didContract.id;
+  }
   presentationRequestConfig.presentation.requestedCredentials[0].trustedIssuers[0] = didContract.input.issuer;
   if ( !(presentationRequestConfig.authority.startsWith("did:ion:")) ) {
     presentationRequestConfig.authority = didContract.input.issuer;
