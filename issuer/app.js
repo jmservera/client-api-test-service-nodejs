@@ -113,7 +113,6 @@ app.get('/issue-request-api', async (req, res) => {
   });
 
   issuanceRequestConfig.callback.url = `https://${req.hostname}/issue-request-api-callback`;
-  issuanceRequestConfig.callback.nonce =  base64url.encode(Buffer.from(secureRandom.randomUint8Array(10)));
   issuanceRequestConfig.callback.state = req.session.id;
   if ( issuanceRequestConfig.issuance.pin ) {
     issuanceRequestConfig.issuance.pin.value = generatePin();

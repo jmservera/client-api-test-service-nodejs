@@ -27,7 +27,6 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
     },
     "callback": {
         "url": "...set at runtime...",
-        "nounce": "...set at runtime...",
         "state": "...set at runtime...",
         "headers": {
             "my-api-key": "blabla"
@@ -59,6 +58,15 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
 
 In the response message from the VC Client API, it will include it's own callback url, which means that once the Microsoft Authenticator has scanned the QR code, it will contact the VC Client API directly and not your node.js code. The node.js code will get confirmation via the callback.
 
+```json
+{
+    "requestId": "799f23ea-524a-45af-99ad-cf8e5018814e",
+    "url": "openid://vc?request_uri=https://dev.did.msidentity.com/v1.0/abc/verifiablecredentials/request/178319f7-20be-4945-80fb-7d52d47ae82e",
+    "expiry": 1622227690,
+    "qrCode": "data:image/png;base64,iVBORw0KGgoA<SNIP>"
+}
+```
+
 ### Issuance Callback
 
 In your callback endpoint, you will get a callback with the below message when the QR code is scanned.
@@ -74,7 +82,6 @@ In your callback endpoint, you will get a callback with the below message when t
 To call the VC Client API to start the verification process, the DotNet API creates a JSON structure like below. Since the WebApp asks the user to present a VC, the request is also called `presentation request`.
 
 ```JSON
-{
     "authority": "...set at runtime...",
     "includeQRCode": false,
     "registration": {
@@ -128,24 +135,24 @@ Once the VC is verified, you get a second, more complete, callback which contain
     "requestId":"c18d8035-3fc8-4c27-a5db-9801e6232569",
     "state": "...what you passed as the state value...",
     "subject": "did:ion: ... of the VC holder...",
-    "issuers": [
-      "type": [
-            "VerifiableCredential",
-            "your credentialType"
-      ],
-      "claims": {
-        "displayName":"Alice Contoso",
-        "sub":"...",
-        "tid":"...",
-        "username":"alice@contoso.com",
-        "lastName":"Contoso",
-        "firstName":"alice"
-      }
+    "issuers": [ 
+        {
+          "type": [ "VerifiableCredential", "your credentialType" ],
+          "claims": {
+            "displayName":"Alice Contoso",
+            "sub":"...",
+            "tid":"...",
+            "username":"alice@contoso.com",
+            "lastName":"Contoso",
+            "firstName":"alice"
+          },
+          "domain":"https://did.woodgrovedemo.com/",
+          "verified":"DNS"
+        }
     ],
     "receipt":{
         "id_token": "...JWT Token of VC..."
-        },
-        "state":"...VC Client API state..."
+        }
     }
 }
 ```
@@ -174,6 +181,23 @@ ngrok http 8081
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.
 
+### Author the json payload files
+
+There are a few samples of json files in the `requests` folder and you can clone them as you like to use other credentials. As you can see in the sample files, much of the details are not specified. These are the autofill fules:
+
+- **manifest** - you must specify the manifest url as the app downloads on the first request.
+- **type** - you ***only*** need to specify the type if it is different that the last part of the manifest url (usually they are the same)
+- **authority** - you need to set this to a `did:ion:...` DID ***if*** you are doing verification of a Verifiable Credentials of a VC that was issued by another party. If you are verifying credentials you issued yourself, the DID in the manifest is used.
+
+Other important things to consider
+
+- **pin** - do not specify a pin-element unless you are issuing credentials where you want a pin code. Either remove the element or set the length to 0.
+- **claims** - do not specify the claims element unless you are issuing credentials using the so called `id_token_hint` model.
+
+### id_token_hint model
+
+With the id_token_hint model, you don't configure a OIDC identity provider .well-known/openid-configuration in your Verifiable Credentials rules file. You manage the authentication yourself as a pre-step to starting and you then pass your required claims to the issuing service.
+
 ### Together with Azure AD B2C
 To use this sample together with Azure AD B2C, you first needs to build it, which means follow the steps above. 
 
@@ -186,69 +210,15 @@ Then you need to deploy B2C Custom Policies that has configuration to add Verifi
 
 To run it locally with Docker
 ```
-docker build -t client-api-test-service-dotnet:v1.0 .
-docker run --rm -it -p 5002:80 client-api-test-service-dotnet:v1.0
+docker build -t client-api-test-service-nodejs:v1.0 .
+docker run --rm -it -p 8081:80 client-api-test-service-nodejs:v1.0
 ```
 
 Then, open a separate command prompt and run the following command
 
 ```Powershell
-ngrok http 5002
+ngrok http 8081
 ```
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.
 
-## appsettings.json
-
-The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
-The setting `AppSetting:ActiveCredentialType` determinds which CredentialType that should be used when the program is running. 
-
-At run-time, the program will use the settings you provide to build the JSON payload to send to the VC Client API for isuance and presentation.
-
-The available settings in the repo are:
-
-- **AppSettings.VerifiedCredentialExpert** - The sample VC from docs.microsoft.com
-- **AppSettings.Cljungdemob2cMembership** - References my VC which issues from my test Azure AD B2C tenant 
-- **AppSettings.FawltyTowers2Employee** - References my VC which issues from my test Azure AD Premium tenant
-- **AppSettings.FawltyTowers2CampusPass** - References my VC which issues from my test Azure AD Premium tenant. It uses an id token hint and a pin code and no OIDC IDP
-- **AppSettings.PinCode** - References a VC where you only need a pin code to issue yourself a VC
-
-
-```JSON
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Trace",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
-    }
-  },
-  "AllowedHosts": "*",
-  "AppSettings": {
-    "ActiveCredentialType": "FawltyTowers2CampusPass",
-    "ApiEndpoint": "https://dev.did.msidentity.com/v1.0/abc/verifiablecredentials/request",
-    "ApiKey": "MyApiKey",
-    "UseAkaMs": false,
-    "CookieKey": "state",
-    "CookieExpiresInSeconds": 7200,
-    "CacheExpiresInSeconds": 300,
-    "client_name": "DotNet Client API Verifier"
-  },
-  "VerifiedCredentialExpert": {
-    "PinCodeLength": 0,
-    "didIssuer": "did:ion:EiAUeAySrc1qgPucLYI_ytfudT8bFxUETNolzz4PCdy1bw:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfMjRiYjMwNzQiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiRDlqYUgwUTFPZW1XYVVfeGtmRzBJOVoyYnctOFdLUFF2TWt2LWtkdjNxUSIsInkiOiJPclVUSzBKSWN0UnFQTHRCQlQxSW5iMTdZS29sSFJvX1kyS0Zfb3YyMEV3In0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2RpZC53b29kZ3JvdmVkZW1vLmNvbS8iXX0sInR5cGUiOiJMaW5rZWREb21haW5zIn1dfX1dLCJ1cGRhdGVDb21taXRtZW50IjoiRWlBeWF1TVgzRWtBcUg2RVFUUEw4SmQ4alVvYjZXdlZrNUpSamdodEVYWHhDQSJ9LCJzdWZmaXhEYXRhIjp7ImRlbHRhSGFzaCI6IkVpQ1NvajVqSlNOUjBKU0tNZEJ1Y2RuMlh5U2ZaYndWVlNIWUNrREllTHV5NnciLCJyZWNvdmVyeUNvbW1pdG1lbnQiOiJFaUR4Ym1ELTQ5cEFwMDBPakd6VXdoNnY5ZjB5cnRiaU5TbXA3dldwbTREVHpBIn19",
-    "didVerifier": "did:ion:EiAUeAySrc1qgPucLYI_ytfudT8bFxUETNolzz4PCdy1bw:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfMjRiYjMwNzQiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiRDlqYUgwUTFPZW1XYVVfeGtmRzBJOVoyYnctOFdLUFF2TWt2LWtkdjNxUSIsInkiOiJPclVUSzBKSWN0UnFQTHRCQlQxSW5iMTdZS29sSFJvX1kyS0Zfb3YyMEV3In0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2RpZC53b29kZ3JvdmVkZW1vLmNvbS8iXX0sInR5cGUiOiJMaW5rZWREb21haW5zIn1dfX1dLCJ1cGRhdGVDb21taXRtZW50IjoiRWlBeWF1TVgzRWtBcUg2RVFUUEw4SmQ4alVvYjZXdlZrNUpSamdodEVYWHhDQSJ9LCJzdWZmaXhEYXRhIjp7ImRlbHRhSGFzaCI6IkVpQ1NvajVqSlNOUjBKU0tNZEJ1Y2RuMlh5U2ZaYndWVlNIWUNrREllTHV5NnciLCJyZWNvdmVyeUNvbW1pdG1lbnQiOiJFaUR4Ym1ELTQ5cEFwMDBPakd6VXdoNnY5ZjB5cnRiaU5TbXA3dldwbTREVHpBIn19",
-    "manifest": "https://beta.did.msidentity.com/v1.0/3c32ed40-8a10-465b-8ba4-0b1e86882668/verifiableCredential/contracts/VerifiedCredentialExpert",
-    "credentialType": "VerifiedCredentialExpert",
-    "client_logo_uri": "https://didcustomerplayground.blob.core.windows.net/public/VerifiedCredentialExpert_icon.png",
-    "client_tos_uri": "https://www.microsoft.com/servicesagreement",
-    "client_purpose": "To check if you know how to use verifiable credentials."
-  },
-  "SomeOtherCredentialType": {
-  }
-}
-``` 
-
-### LogLevel Trace
-
-The sample is quite verbose and you should see trace information about every GET/POST that happens. This is for training purposes so you can follow what happens. 

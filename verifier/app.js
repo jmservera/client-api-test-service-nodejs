@@ -116,7 +116,6 @@ app.get('/presentation-request', async (req, res) => {
   });
 
   presentationRequestConfig.callback.url = `https://${req.hostname}/presentation-request-api-callback`;
-  presentationRequestConfig.callback.nonce =  base64url.encode(Buffer.from(secureRandom.randomUint8Array(10)));
   presentationRequestConfig.callback.state = req.session.id;
 
   console.log( 'VC Client API Request' );
@@ -273,7 +272,9 @@ async function getDidContract( ) {
     presentationRequestConfig.presentation.requestedCredentials[0].type = didContract.id;
   }
   presentationRequestConfig.presentation.requestedCredentials[0].trustedIssuers[0] = didContract.input.issuer;
+  console.log(presentationRequestConfig.authority);
   if ( !(presentationRequestConfig.authority.startsWith("did:ion:")) ) {
+    console.log("authority <-- manifest");
     presentationRequestConfig.authority = didContract.input.issuer;
   }
 }
