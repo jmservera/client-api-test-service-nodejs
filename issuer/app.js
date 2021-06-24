@@ -108,8 +108,10 @@ app.get('/issue-request-api', async (req, res) => {
       "status" : 0,
       "message": "Waiting for QR code to be scanned"
     };
-    session.sessionData = sessionData;
-    sessionStore.set( req.session.id, session);
+    if ( session ) {
+      session.sessionData = sessionData;
+      sessionStore.set( req.session.id, session);  
+    }
   });
 
   issuanceRequestConfig.callback.url = `https://${req.hostname}/issue-request-api-callback`;

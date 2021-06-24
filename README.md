@@ -162,8 +162,8 @@ Some notable attributes in the message:
 
 ## Running the sample
 
-### Standalone
-To run the sample standalone, just clone the repository, compile & run it. It's callback endpoint must be publically reachable, and for that reason, use `ngrok` as a reverse proxy to read your app.
+### Running the issuer
+To run the sample issuer standalone, just clone the repository, compile & run it. It's callback endpoint must be publically reachable, and for that reason, use `ngrok` as a reverse proxy to read your app.
 
 ```Powershell
 git clone https://github.com/cljung/client-api-test-service-nodejs.git
@@ -180,6 +180,24 @@ ngrok http 8081
 ```
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.
+
+### Running the verifier
+To run the sample verifier standalone, navigate to the verifier folder, do `npm install` and start it. Then run `ngrok` with a different port than the issuer.
+
+```Powershell
+cd verifier
+npm install
+node app.js ./presentation_request_config_v2.json
+```
+
+Then, open a separate command prompt and run the following command
+
+```Powershell
+ngrok http 8082
+```
+
+Grab, the url in the ngrok output (like `https://96a139d4199c.ngrok.io`) and Browse to it.
+
 
 ### Docker build
 

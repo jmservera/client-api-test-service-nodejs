@@ -111,8 +111,10 @@ app.get('/presentation-request', async (req, res) => {
       "status" : 0,
       "message": "Waiting for QR code to be scanned"
     };
-    session.sessionData = sessionData;
-    sessionStore.set( req.session.id, session);
+    if ( session ) {
+      session.sessionData = sessionData;
+      sessionStore.set( req.session.id, session);
+    }
   });
 
   presentationRequestConfig.callback.url = `https://${req.hostname}/presentation-request-api-callback`;
